@@ -66,6 +66,10 @@
 
         <activity android:name=".treasure.HomeActivity">
         </activity>
+        <activity android:name=".treasure.detail.TreasureDetailActivity">
+        </activity>
+        <activity android:name=".treasure.hide.HideTreasureActivity">
+        </activity>
     </application>
 
 </manifest>

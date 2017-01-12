@@ -3,6 +3,7 @@ package com.feicui.mytreasure.treasure.map;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,12 +31,18 @@ import com.baidu.mapapi.map.Marker;
 import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
+import com.baidu.mapapi.search.geocode.GeoCodeResult;
+import com.baidu.mapapi.search.geocode.GeoCoder;
+import com.baidu.mapapi.search.geocode.OnGetGeoCoderResultListener;
+import com.baidu.mapapi.search.geocode.ReverseGeoCodeOption;
+import com.baidu.mapapi.search.geocode.ReverseGeoCodeResult;
 import com.feicui.mytreasure.R;
 import com.feicui.mytreasure.commons.ActivityUtils;
 import com.feicui.mytreasure.custom.TreasureView;
 import com.feicui.mytreasure.treasure.Area;
 import com.feicui.mytreasure.treasure.Treasure;
 import com.feicui.mytreasure.treasure.TreasureRepo;
+import com.feicui.mytreasure.treasure.hide.HideTreasureActivity;
 
 import java.util.List;
 
@@ -48,6 +55,7 @@ import butterknife.OnClick;
  */
 
 public class MapFragment extends Fragment implements MapMvpView {
+
     @BindView(R.id.iv_located)//藏在这里的图标
             ImageView ivLocated;
     @BindView(R.id.btn_HideHere)//藏在这里的按钮
@@ -88,19 +96,21 @@ public class MapFragment extends Fragment implements MapMvpView {
     private BaiduMap baiduMap;// 地图的操作类
     private LocationClient locationClient;
     private boolean mIsFirst = true;
-    private static LatLng currentLocation; //当前位置
+    private static LatLng currentLocation; //当前位置经纬度
     private LatLng currentStatus;//当前状态
     private Marker currentMarker;//当前覆盖物
 
     //定位图标
     private BitmapDescriptor dot = BitmapDescriptorFactory.fromResource(R.mipmap.treasure_dot);
     private BitmapDescriptor expanded = BitmapDescriptorFactory.fromResource(R.mipmap.treasure_expanded);
+    private GeoCoder geoCoder;
+    private static String currentAddr;//当前位置
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+
         View view = inflater.inflate(R.layout.fragment_map, container);
-        ButterKnife.bind(this, view);
         return view;
     }
 
@@ -117,7 +127,47 @@ public class MapFragment extends Fragment implements MapMvpView {
         // 初始化定位相关
         initLocation();
 
+        // 地理编码的初始化相关
+        initGeoCoder();
+
     }
+
+    /*
+    * 地理编码的初始化相关
+    * */
+    private void initGeoCoder() {
+
+        // 初始化：创建出一个地理编码查询的对象
+        geoCoder = GeoCoder.newInstance();
+        // 设置查询结果的监听:地理编码的监听
+        geoCoder.setOnGetGeoCodeResultListener(geoCoderResultListener);
+
+    }
+
+    /*
+    * 地理编码的监听
+    * */
+    private OnGetGeoCoderResultListener geoCoderResultListener = new OnGetGeoCoderResultListener() {
+        // 得到地理编码的结果：地址-->经纬度
+        @Override
+        public void onGetGeoCodeResult(GeoCodeResult geoCodeResult) {
+
+        }
+
+        // 得到反向地理编码的结果：经纬度-->地址
+        @Override
+        public void onGetReverseGeoCodeResult(ReverseGeoCodeResult reverseGeoCodeResult) {
+
+            if (reverseGeoCodeResult == null) {
+                currentAddr = "未知位置";
+                return;
+            }
+
+            String address = reverseGeoCodeResult.getAddress();
+            tvCurrentLocation.setText(address);
+
+        }
+    };
 
 
     /*
@@ -192,7 +242,7 @@ public class MapFragment extends Fragment implements MapMvpView {
             double longitude = bdLocation.getLongitude();//经度
 
             currentLocation = new LatLng(latitude, longitude);
-            String currentAddr = bdLocation.getAddrStr();
+            currentAddr = bdLocation.getAddrStr();
 
             // 设置定位图层展示的数据
             MyLocationData data = new MyLocationData.Builder()
@@ -239,6 +289,16 @@ public class MapFragment extends Fragment implements MapMvpView {
                 // 地图状态发生变化以后实时获取当前区域内的宝藏
                 updateMapArea();
 
+                // 在埋藏宝藏的情况下
+                if (mUIMode == UI_MODE_HIDE) {
+
+                    // 设置反地理编码的位置
+                    ReverseGeoCodeOption option = new ReverseGeoCodeOption();
+                    option.location(target);
+
+                    // 发起反地理编码
+                    geoCoder.reverseGeoCode(option);
+                }
                 MapFragment.this.currentStatus = target;
             }
         }
@@ -264,10 +324,12 @@ public class MapFragment extends Fragment implements MapMvpView {
 
         mapPresenter.getTreasure(area);
     }
+
     /*
        * 设置地图上标注物的点击监听
        * */
     private BaiduMap.OnMarkerClickListener markerClickListener = new BaiduMap.OnMarkerClickListener() {
+
         @Override
         public boolean onMarkerClick(Marker marker) {
             if (currentMarker != null) {
@@ -364,6 +426,28 @@ public class MapFragment extends Fragment implements MapMvpView {
 
     }
 
+
+    @OnClick(R.id.treasureView)
+    public void clickTreasureView() {
+
+        int id = currentMarker.getExtraInfo().getInt("id");
+        Treasure treasure = TreasureRepo.getInstance().getTreasure(id);
+        // TODO: 2017/1/12 0012 宝藏详情
+    }
+
+    // 点击宝藏标题录入的卡片，跳转埋藏宝藏的详细页面
+    @OnClick(R.id.hide_treasure)
+    public void hideTreasure() {
+        String title = etTreasureTitle.getText().toString();
+        if (TextUtils.isEmpty(title)) {
+            activityUtils.showToast("请输入宝藏标题");
+            return;
+        }
+        // 跳转到埋藏宝藏的详细页面
+        LatLng latLng = baiduMap.getMapStatus().target;
+        HideTreasureActivity.open(getContext(), title, currentAddr, latLng, 0);
+    }
+
     /*
   * 添加覆盖物
   * */
@@ -441,6 +525,10 @@ public class MapFragment extends Fragment implements MapMvpView {
 
     @Override
     public void setData(List<Treasure> list) {
+
+        // 再次网络请求拿到数据添加覆盖物之前，清理之前的覆盖物
+        baiduMap.clear();// 清空地图上所有的覆盖物和infoWindow
+
         for (Treasure treature : list) {
             LatLng latLng = new LatLng(treature.getLatitude(), treature.getLongitude());
 
@@ -448,9 +536,26 @@ public class MapFragment extends Fragment implements MapMvpView {
         }
     }
 
-    public static LatLng getMyLocation() {
+    // 将定位的位置供其它调用获取
+    public static LatLng getMyLocation(){
         return currentLocation;
     }
 
+    // 将定位的地址供其它调用获取
+    public static String getLocationAddr(){
+        return currentAddr;
+    }
+
+    // 对外提供一个方法：什么时候可以退出了
+    public boolean clickbackPrssed() {
+
+        // 如果不是普通视图，切换成普通视图
+        if (mUIMode != UI_MODE_NORMAL) {
+            changeUIMode(UI_MODE_NORMAL);
+            return false;
+        }
+        // 是普通的视图：告诉HomeActivity，可以退出了
+        return true;
+    }
 
 }

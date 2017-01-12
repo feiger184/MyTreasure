@@ -2,6 +2,7 @@ package com.feicui.mytreasure.treasure;
 
 import android.os.Bundle;
 import android.support.design.widget.NavigationView;
+import android.support.v4.app.FragmentManager;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -37,6 +38,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     private ActivityUtils activityUtils;
     private ImageView ivIcon;
     private MapFragment mapFragment;
+    private FragmentManager supportFragmentManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,7 +46,8 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         setContentView(R.layout.activity_home);
         ButterKnife.bind(this);
         // 通过id找到MapFragment
-        mapFragment = (MapFragment) getSupportFragmentManager().findFragmentById(R.id.mapFragment);
+        supportFragmentManager = getSupportFragmentManager();
+        mapFragment = (MapFragment) supportFragmentManager.findFragmentById(R.id.mapFragment);
         // 进入页面，将宝藏数据的缓存清空
         TreasureRepo.getInstance().clear();
 
@@ -117,7 +120,10 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START);
         } else {
-            super.onBackPressed();
+            // MapFragment里面视图的普通的视图，可以退出
+            if (mapFragment.clickbackPrssed()) {
+                super.onBackPressed();
+            }
         }
     }
 

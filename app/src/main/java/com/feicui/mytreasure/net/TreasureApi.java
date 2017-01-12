@@ -2,6 +2,8 @@ package com.feicui.mytreasure.net;
 
 import com.feicui.mytreasure.treasure.Area;
 import com.feicui.mytreasure.treasure.Treasure;
+import com.feicui.mytreasure.treasure.hide.HideTreasure;
+import com.feicui.mytreasure.treasure.hide.HideTreasureResult;
 import com.feicui.mytreasure.user.User;
 import com.feicui.mytreasure.user.login.LoginResult;
 import com.feicui.mytreasure.user.register.RegisterResult;
@@ -27,6 +29,10 @@ public interface TreasureApi {
     // 获取区域内的宝藏数据请求
     @POST("/Handler/TreasureHandler.ashx?action=show")
     Call<List<Treasure>> getTreasureInArea(@Body Area area);
+
+    // 埋藏宝藏的请求
+    @POST("/Handler/TreasureHandler.ashx?action=hide")
+    Call<HideTreasureResult> hideTreasure(@Body HideTreasure hideTreasure);
 
 }
 
