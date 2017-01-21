@@ -32,6 +32,8 @@ import com.feicui.mytreasure.custom.TreasureView;
 import com.feicui.mytreasure.treasure.Treasure;
 import com.feicui.mytreasure.treasure.map.MapFragment;
 
+import java.util.List;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
@@ -40,13 +42,13 @@ import butterknife.OnClick;
  * 宝藏详情界面
  */
 
-public class TreasureDetailActivity extends AppCompatActivity {
+public class TreasureDetailActivity extends AppCompatActivity implements TreasureDetailView{
 
 
     @BindView(R.id.iv_navigation)//右上角提交按钮
             ImageView ivNavigation;
     @BindView(R.id.toolbar)
-    Toolbar toolbar;
+            Toolbar toolbar;
     @BindView(R.id.frameLayout)//上方头像
             FrameLayout frameLayout;
     @BindView(R.id.detail_treasure)//卡片信息
@@ -57,13 +59,13 @@ public class TreasureDetailActivity extends AppCompatActivity {
     private static final String KEY_TREASURE = "key_treasure";
     private ActivityUtils activityUtils;
     private Treasure treature;
+    private TreasureDetailPresenter treasureDetailPresenter;
 
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_treasure_detail);
-        ButterKnife.bind(this);
     }
 
     /*
@@ -81,7 +83,7 @@ public class TreasureDetailActivity extends AppCompatActivity {
         ButterKnife.bind(this);
 
         activityUtils = new ActivityUtils(this);
-
+        treasureDetailPresenter = new TreasureDetailPresenter(this);
         //拿到传递过来的数据
         treature = (Treasure) getIntent().getSerializableExtra(KEY_TREASURE);
 
@@ -94,6 +96,14 @@ public class TreasureDetailActivity extends AppCompatActivity {
 
         // 地图和宝藏的展示
         initMapView();
+
+        //宝藏卡片的视图展示
+        detailTreasure.bindTreasure(treature);
+
+        //去进行网络获取得到宝藏的详情
+        TreasureDetail treasureDetail = new TreasureDetail(treature.getId());
+        treasureDetailPresenter.getTreasureDetail(treasureDetail);
+
 
     }
 
@@ -271,4 +281,20 @@ public class TreasureDetailActivity extends AppCompatActivity {
                 .create().show();
     }
 
+    @Override
+    public void showMessage(String msg) {
+        activityUtils.showToast(msg);
+    }
+
+    @Override
+    public void setData(List<TreasureDetailResult> resultList) {
+
+        // 请求的数据有内容
+        if (resultList.size() >= 1) {
+            TreasureDetailResult result = resultList.get(0);
+            tvDetailDescription.setText(result.description);
+            return;
+        }
+        tvDetailDescription.setText("当前的宝藏没有详情信息");
+    }
 }

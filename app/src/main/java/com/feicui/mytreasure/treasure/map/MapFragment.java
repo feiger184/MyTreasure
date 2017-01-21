@@ -42,6 +42,7 @@ import com.feicui.mytreasure.custom.TreasureView;
 import com.feicui.mytreasure.treasure.Area;
 import com.feicui.mytreasure.treasure.Treasure;
 import com.feicui.mytreasure.treasure.TreasureRepo;
+import com.feicui.mytreasure.treasure.detail.TreasureDetailActivity;
 import com.feicui.mytreasure.treasure.hide.HideTreasureActivity;
 
 import java.util.List;
@@ -432,7 +433,8 @@ public class MapFragment extends Fragment implements MapMvpView {
 
         int id = currentMarker.getExtraInfo().getInt("id");
         Treasure treasure = TreasureRepo.getInstance().getTreasure(id);
-        // TODO: 2017/1/12 0012 宝藏详情
+        TreasureDetailActivity.open(getContext(), treasure);
+
     }
 
     // 点击宝藏标题录入的卡片，跳转埋藏宝藏的详细页面
